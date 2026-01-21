@@ -1,0 +1,79 @@
+# Grafana Config Map for grafan.ini
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: monitoring
+data:
+  grafana.ini: |
+    [smtp]
+    enabled = true
+    host = smtp.gmail.com:587
+    user = your-email@gmail.com # Update with actual values
+    password = your-app-password # Update with actual values
+    skip_verify = false
+    from_address = your-email@gmail.com # Update with actual values
+    from_name = Grafana Alerts
+    
+    [alerting]
+    enabled = true
+    
+    [unified_alerting]
+    enabled = true
+---
+# Grafana Deployment with ConfigMap
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          ports:
+            - containerPort: 3000
+              name: http-grafana
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: admin123
+          volumeMounts:
+            # Mount ConfigMap as grafana.ini
+            - name: grafana-config
+              mountPath: /etc/grafana/grafana.ini
+              subPath: grafana.ini
+      volumes:
+        # ConfigMap volume
+        - name: grafana-config
+          configMap:
+            name: grafana-config
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  type: NodePort  # Change to NodePort / LoadBalancer for demo purposes otherwise use ingress
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: grafana
