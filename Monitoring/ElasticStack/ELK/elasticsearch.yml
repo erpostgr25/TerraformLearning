@@ -1,27 +1,26 @@
 # Use a descriptive name for your cluster:
-cluster.name: my-elk-cluster
+cluster.name: my-application
+
 # Use a descriptive name for the node:
-#
 node.name: node-1
 
 # Path to directory where to store the data (separate multiple locations by comma):
 path.data: /var/lib/elasticsearch
-
-# Path to log files:
 path.logs: /var/log/elasticsearch
 
 # By default Elasticsearch is only accessible on localhost. Set a different
 # address here to expose this node on the network:
 network.host: 0.0.0.0
 
-# By default Elasticsearch listens for HTTP traffic on the first free port it
-# finds starting at 9200. Set a specific HTTP port here:
-#
-#http.port: 9200
+# Connections are encrypted and require user authentication
+http.host: 0.0.0.0
+
+# Allow other nodes to join the cluster from anywhere
+# Connections are encrypted and mutually authenticated
+transport.host: 0.0.0.0
 
 # Enable security features
 xpack.security.enabled: true
-
 xpack.security.enrollment.enabled: true
 
 # Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
@@ -36,11 +35,5 @@ xpack.security.transport.ssl:
   keystore.path: certs/transport.p12
   truststore.path: certs/transport.p12
 
-
-# Allow HTTP API connections from anywhere
-# Connections are encrypted and require user authentication
-http.host: 0.0.0.0
-
-# Allow other nodes to join the cluster from anywhere
-# Connections are encrypted and mutually authenticated
-transport.host: 0.0.0.0
+# Discovery settings
+discovery.type: single-node

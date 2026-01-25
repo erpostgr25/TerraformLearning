@@ -58,6 +58,16 @@ sudo apt install -y elasticsearch
 Edit `/etc/elasticsearch/elasticsearch.yml`:
 Update the settings as per **elasticsearch.yml** file present in the current folder
 
+
+Edit file `/etc/elasticsearch/jvm.options`:
+Uncomment the lines:
+-Xms4g
+-Xmx4g
+
+and change it to:
+-Xms1g
+-Xmx1g
+
 #### Start Elasticsearch
 
 ```bash
@@ -150,6 +160,17 @@ sudo apt install -y logstash
 Create the configuration file: /etc/logstash/conf.d/logstash-nginx-pipeline.conf
 Update the settings as per **logstash-nginx-pipeline.conf** file present in the current folder
 
+
+Update the heap memory in this file:
+/etc/logstash/jvm.options
+
+Uncomment the lines:
+-Xms1g
+-Xmx1g
+
+to:
+-Xms512m
+-Xmx512m
 
 #### Start Logstash
 
