@@ -1,0 +1,420 @@
+============================
+AWS Session 2 - Class Notes
+============================
+
+## Application Architecture Patterns
+
+Let's consider **amazon.com** as an example to understand different architecture patterns.
+
+---
+
+## 1. Monolith Architecture
+
+### What is a Monolith?
+
+**One single large codebase** containing all features/services of the application.
+
+### Amazon.com as Monolith (Hypothetical)
+
+All services in one codebase:
+- Groceries service
+- Mobile service
+- Order service
+- Payment service
+- Notification service
+- UI service
+- Backend service
+- Card service
+- Admin service
+
+### Problems with Monolith
+
+❌ **Single point of failure** - If payment service fails (due to external gateway issues), **entire application goes down**
+
+❌ **Risky deployments** - Upgrading one UI feature requires deploying the entire application, risking stability of everything
+
+❌ **Complicated testing** - One change requires testing the entire application
+
+❌ **Inefficient scaling** - More traffic on mobile service? Must scale the **entire app** (not just mobile service)
+
+### Pros of Monolith
+
+✅ **Simple communication** - All code in one place, no inter-service communication needed
+
+✅ **Good for small applications** - Simpler to build initially
+
+✅ **Single CI/CD pipeline** - Just one build and deployment pipeline
+
+---
+
+### Deploying Monolith on AWS
+
+**Architecture**:
+```
+Route53 → ALB → Auto Scaling Group (EC2 instances)
+                 ├── EC2-1 (Java installed, JAR deployed)
+                 ├── EC2-2 (Java installed, JAR deployed)
+                 └── EC2-3 (Java installed, JAR deployed)
+```
+
+**Steps**:
+1. Launch EC2 instances
+2. Install Java (or required runtime)
+3. Deploy JAR file
+4. Configure Auto Scaling
+5. Put behind Application Load Balancer
+
+**Note**: Read about Amazon Prime Video (they actually moved FROM microservices back to monolith for certain components to reduce costs!)
+
+---
+
+
+## 2. Microservices Architecture
+
+### What are Microservices?
+
+**Breaking larger code into small, independent packages** - each service handles one specific feature.
+
+### Amazon.com as Microservices
+
+Each service is independent:
+- **Groceries service** → Python
+- **Mobile service** → Node.js
+- **Order service** → Java
+- **Payment service** → Python
+- **Notification service** → Go
+- **UI service** → React
+- **Backend service** → Java
+- **Card service** → Python
+- **Admin service** → Node.js
+
+Each service:
+- Has its own codebase
+- Own Git repository
+- Own database (ideally)
+- Own deployment pipeline
+
+---
+
+### Pros of Microservices
+
+✅ **Independent scaling** - High load on "order service"? Scale only that service, not everything
+
+✅ **Independent development** - All services in separate Git repos, version upgrades don't affect others
+
+✅ **Fault isolation** - Payment service down? Other services still work, website remains functional
+
+✅ **Technology flexibility** - Different tech stack for different services (Java, Python, Node.js, Go)
+
+✅ **Loosely coupled** - Services communicate via APIs, not direct code dependencies
+
+✅ **Highly scalable** - Scale what you need, when you need it
+
+---
+
+### Cons of Microservices
+
+❌ **Increased complexity** - Multiple design patterns, communication routes to manage
+
+❌ **Network dependency** - Inter-service connectivity issues can break functionality (new single point of failure)
+
+❌ **Multiple CI/CD pipelines** - Need separate pipeline for each service
+
+❌ **Higher infrastructure cost** - Running multiple services means more resources
+
+---
+
+## 3. Event-Driven Architecture (EDA)
+
+### What is Event-Driven?
+
+**Any activity is an event** that triggers automated actions.
+
+### Examples of Events
+
+- Customer places order on Zomato → Event triggers
+- Meeting scheduled → Event triggers
+- Scheduled task → "At 5 PM IST, run backup job"
+- File uploaded to S3 → Event triggers
+
+---
+
+### EDA Components
+
+```
+Producer → Event Broker → Consumer(s)
+```
+
+- **Producer**: Generates events (e.g., S3 upload, API call)
+- **Broker**: Transmits events (e.g., SNS, SQS, EventBridge, Kafka)
+- **Consumer**: Processes events (e.g., Lambda, ECS task)
+
+---
+
+### Use Cases
+
+✅ **Workloads that don't need 24/7 running** - Run only when triggered
+
+✅ **Asynchronous jobs** - Batch processing, data processing
+
+✅ **Cost optimization** - Pay only when events occur, not for idle time
+
+---
+
+### Real-World Example: S3 Data Processing
+
+**Scenario**:
+1. Customer uploads large CSV file to S3 bucket "customer-uploads"
+2. Event triggers Lambda function automatically
+3. Lambda parses the CSV data
+4. Lambda stores parsed data in database (RDS/DynamoDB)
+5. Once data is stored, Lambda triggers notification job
+6. Email sent to customer: "Your data has been processed"
+
+**Architecture**:
+```
+S3 Upload Event → Lambda (Parse CSV) → Database → Lambda (Send Email) → SES
+```
+
+**Benefits**:
+- No servers running 24/7
+- Pay only for Lambda execution time
+- Automatic scaling based on upload volume
+
+---
+
+### SAGA Design Pattern
+
+**What is SAGA?**
+- Pattern for managing distributed transactions across microservices
+- Each service performs local transaction and publishes event
+- Next service listens to event and performs its transaction
+- If any step fails, compensating transactions rollback changes
+
+**Example**: E-commerce order
+```
+Order Service → Payment Service → Inventory Service → Shipping Service
+     ↓               ↓                  ↓                   ↓
+  Create Order   Process Payment   Reserve Items      Create Shipment
+     ↓               ↓                  ↓                   ↓
+  Publish Event  Publish Event    Publish Event       Publish Event
+```
+
+If payment fails → Compensate by canceling order
+
+---
+
+
+## CRUD Operations
+
+**CRUD = Create, Read, Update, Delete**
+
+Every API typically provides these four basic operations:
+
+- **Create** - POST request (add new data)
+- **Read** - GET request (retrieve data)
+- **Update** - PUT/PATCH request (modify existing data)
+- **Delete** - DELETE request (remove data)
+
+---
+
+
+## OSI Model & Load Balancers
+
+### OSI Layers (Relevant to Load Balancing)
+
+**Total 7 layers** in OSI model. We focus on:
+
+- **Layer 4** - Network/Transport Layer (TCP/UDP)
+- **Layer 7** - Application Layer (HTTP/HTTPS)
+
+---
+
+### AWS Load Balancer Types
+
+| Load Balancer | Layer | Protocol | Use Case |
+|---------------|-------|----------|----------|
+| **NLB** (Network Load Balancer) | Layer 4 | TCP/UDP/TLS | Ultra-low latency, high throughput |
+| **ALB** (Application Load Balancer) | Layer 7 | HTTP/HTTPS | Intelligent routing, microservices |
+
+---
+
+### Network Load Balancer (NLB) - Layer 4
+
+**Key Characteristics**:
+- Works at **Transport Layer (Layer 4)**
+- **Ultra-low latency** (~100 microseconds)
+- Handles millions of requests per second
+- Simple forwarding based on IP + Port
+
+**Why is latency very low?**
+- **No application-layer intelligence**
+- Does NOT inspect:
+  - Hostname (which domain requested)
+  - URL path (which endpoint requested)
+  - HTTP headers
+  - Request payload
+- Simply forwards TCP/UDP packets based on IP:Port
+
+**Use Cases**:
+- Gaming applications (low latency critical)
+- Real-time communications
+- IoT device connections
+- High-throughput workloads
+
+---
+
+### Application Load Balancer (ALB) - Layer 7
+
+**Key Characteristics**:
+- Works at **Application Layer (Layer 7)**
+- Inspects HTTP/HTTPS requests
+- Intelligent routing based on content
+- Slightly higher latency than NLB (but still very fast)
+
+**Why use ALB?**
+- Need intelligent routing (host-based, path-based)
+- Microservices architecture
+- Container-based applications (ECS, EKS)
+
+---
+
+## Layer 7 Load Balancer Features
+
+### 1. Host-Based Routing
+
+**Scenario**: Multiple websites behind **one ALB**
+
+**Setup**:
+```
+ALB DNS: prod-alb.aws.com
+
+Route53 Records:
+├── example.com → CNAME → prod-alb.aws.com
+└── test.com    → CNAME → prod-alb.aws.com
+```
+
+**How it works**:
+
+#### Request for example.com
+```
+Client requests: https://example.com
+    ↓
+Route53 resolves to: prod-alb.aws.com
+    ↓
+ALB receives request
+    ↓
+ALB reads Hostname: "example.com"
+    ↓
+ALB Rule: If hostname = "example.com" → Forward to TG-Example
+    ↓
+Target Group: TG-Example (3 EC2 servers running example.com code)
+```
+
+#### Request for test.com
+```
+Client requests: https://test.com
+    ↓
+Route53 resolves to: prod-alb.aws.com
+    ↓
+ALB receives request
+    ↓
+ALB reads Hostname: "test.com"
+    ↓
+ALB Rule: If hostname = "test.com" → Forward to TG-Test
+    ↓
+Target Group: TG-Test (5 EC2 servers running test.com code)
+```
+
+**Benefits**:
+- Single ALB for multiple websites
+- Cost savings (one ALB instead of two)
+- Centralized SSL certificate management
+
+---
+
+### 2. Path-Based Routing
+
+**Scenario**: Microservices architecture - different paths route to different services
+
+**Example URLs**:
+- `example.com/` → UI service
+- `example.com/checkout` → Checkout microservice
+- `example.com/payments` → Payments microservice
+
+**Architecture**:
+```
+Client → Route53 (example.com) → ALB (prod-alb.aws.com)
+                                    ↓
+                         ALB reads request PATH
+                                    ↓
+        ┌───────────────────────────┼───────────────────────────┐
+        ↓                           ↓                           ↓
+Path = "/"              Path = "/checkout"          Path = "/payments"
+        ↓                           ↓                           ↓
+   TG-UI-Service            TG-Checkout-Service          TG-Payment-Service
+        ↓                           ↓                           ↓
+  EC2/EKS Pods             EC2/EKS Pods                EC2/EKS Pods
+  (React App)              (Java Service)              (Python Service)
+```
+
+**ALB Listener Rules**:
+```
+Rule 1: If path = "/" → Forward to TG-UI-Service
+Rule 2: If path = "/checkout/*" → Forward to TG-Checkout-Service
+Rule 3: If path = "/payments/*" → Forward to TG-Payment-Service
+```
+
+**Benefits**:
+- Perfect for microservices
+- Each service scales independently
+- Different tech stacks for different paths
+- Easy to add/remove services
+
+---
+
+---
+
+## Ingress-Nginx Controller (Kubernetes Context)
+
+### What is it?
+
+Kubernetes component for routing external traffic to services inside the cluster.
+
+### Deployment on AWS EKS
+
+**Setup**:
+```
+Ingress-Nginx Controller deployed as Service Type: "LoadBalancer"
+    ↓
+Service annotation: "service.beta.kubernetes.io/aws-load-balancer-type: nlb"
+    ↓
+AWS creates NLB automatically
+```
+
+**Traffic Flow**:
+```
+Client
+  ↓
+NLB (Layer 4 - created by AWS)
+  ↓
+Forwards traffic directly to Kubernetes Worker Nodes (EC2 instances)
+  ↓
+Ingress-Nginx Controller Pods (running nginx webserver)
+  ↓
+Controller inspects hostname/path (Layer 7 logic)
+  ↓
+Routes to appropriate Kubernetes Service → Pods
+```
+
+**Key Points**:
+- **NLB doesn't care about URL path or hostname**
+- NLB simply forwards to worker nodes
+- **Nginx Controller handles Layer 7 routing** (path-based, host-based)
+- Nginx pods run actual webserver to inspect requests
+
+**Why NLB + Nginx?**
+- NLB: Ultra-low latency entry point
+- Nginx: Flexible Layer 7 routing inside cluster
+
+---

@@ -54,12 +54,13 @@ If using Lambda to process queues:
 For each queue:
 
 1. Open Lambda -> choose function.
-2. Click Add trigger.
-3. Select SQS.
-4. Choose queue (example: `billing-queue`).
-5. Configure:
+2. Go to "Configuration" -> "Permissions" -> Open the Role link and add the AWS managed policy "AWSLambdaSQSQueueExecutionRole" in the role
+3. Click Add trigger.
+4. Select SQS.
+5. Choose queue (example: `billing-queue`).
+6. Configure:
    - Batch size defaults (usually 1–10)
-6. Save.
+7. Save.
 
 Repeat for:
 - shipping-queue -> shipping-processor

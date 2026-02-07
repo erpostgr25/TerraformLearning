@@ -1,0 +1,231 @@
+============================
+AWS Session 1 - Class Notes
+============================
+
+## Scenario 1: Starting Simple - Single EC2 Website
+
+### Initial Setup
+- **Region**: Mumbai (ap-south-1)
+- **AZ**: ap-south-1a
+- **Architecture**: Single EC2 instance serving website
+- **Users**: India-based customers
+
+### The Setup
+```
+Users → EC2 (Mumbai) → Website Code
+```
+
+Simple, cost-effective, works fine for local traffic.
+
+---
+
+## Scenario 2: Growth - Need to Scale (After 2 Months)
+
+### Problem
+- Customer base increased
+- More load on single server
+- Need to handle higher traffic
+
+### Solution: Add Load Balancer + Auto Scaling
+
+**New Architecture**:
+```
+Users → Load Balancer → Multiple EC2 instances (Auto Scaling)
+                        ├── EC2-1 (ap-south-1a)
+                        └── EC2-2 (ap-south-1b)
+```
+
+**Benefits**:
+- Load distributed evenly across servers
+- High availability (AZ redundancy)
+- Auto-scaling handles traffic spikes
+
+---
+
+## Scenario 3: Going Global - USA Expansion
+
+### The Challenge
+Website deployed in Mumbai, but now expanding to USA market.
+
+### Option 1: Replicate Infrastructure in USA Region
+
+**Approach**: Deploy same setup in US region
+
+**Issues**:
+- **Double the cost** - running infrastructure in both regions
+- Makes sense only when:
+  - Certain about good engagement in USA
+  - Revenue justifies the cost
+- **Not ideal when starting** - creates financial burden
+
+---
+
+### Option 2: Serve USA Users Directly from Mumbai
+
+**Approach**: USA users access the website directly (hosted in Mumbai)
+
+**Issues**:
+- **High latency** - data traveling from Mumbai to USA
+- **Poor user experience** - slow page loads
+- **Users will leave** - no interest in slow websites
+
+---
+
+### Option 3: CloudFront (CDN) - The Right Solution
+
+**Approach**: Existing Mumbai infra + AWS CloudFront CDN
+
+**Architecture**:
+```
+Mumbai Region:
+Route53 → CloudFront (CDN) → ALB → Multiple EC2s → Website
+
+CloudFront Edge Locations:
+├── Delhi (for India users)
+├── Virginia (for USA users)
+├── London (for Europe users)
+└── 200+ more edge locations globally
+```
+
+---
+
+## What is CloudFront (CDN)?
+
+**CDN = Content Delivery Network**
+
+A network that delivers content to users at distant locations with minimal latency.
+
+**Major CDN Providers**:
+- **Akamai** - The biggest CDN provider globally
+- **Cloudflare** - Another major player
+- **AWS CloudFront** - AWS's CDN service
+
+---
+
+## How CloudFront Works
+
+### First Request from USA User
+
+1. User in USA visits the website
+2. Request hits CloudFront (not directly to Mumbai)
+3. CloudFront checks nearest edge location (e.g., Virginia)
+4. **Cache MISS** - content not in edge location yet
+5. CloudFront fetches content from Mumbai origin (ALB → EC2)
+6. CloudFront caches static content (HTML, CSS, JS, images) at Virginia edge location
+7. Content served to user from Virginia edge (fast!)
+
+### Subsequent Requests from USA Users
+
+1. User in USA visits the website
+2. Request hits CloudFront Virginia edge location
+3. **Cache HIT** - content already cached
+4. Content served directly from Virginia edge (very fast!)
+5. **No trip to Mumbai needed** - latency reduced from ~300ms to ~20ms
+
+### For India Users
+
+- First request → CloudFront Delhi edge → fetch from Mumbai → cache → serve
+- Subsequent requests → serve directly from Delhi edge
+- Still fast because Mumbai is geographically close to Delhi
+
+---
+
+## Real-World Example: Global Bank Deployment
+
+### The Challenge
+How does American Express (or similar global banks) deploy on AWS while meeting compliance requirements of all countries they operate in?
+
+### The Strategy
+
+#### Category 1: Global Applications (Non-Sensitive)
+
+**Examples**:
+- Marketing websites
+- Blog content
+- General information pages
+- Mobile app static assets
+
+**Deployment**:
+- Single region (e.g., USA)
+- CloudFront for global delivery
+- No financial data involved
+- No country-specific compliance needed
+
+**Architecture**:
+```
+USA Region → CloudFront (Global CDN) → Users Worldwide
+```
+
+---
+
+#### Category 2: Country-Specific Applications (Sensitive Data)
+
+**Examples**:
+- Banking transactions
+- Customer financial data
+- Account management
+- Payment processing
+
+**Deployment**:
+- **Separate infrastructure per region**
+- Must comply with local regulations:
+  - Data residency laws (data must stay in country)
+  - Financial regulations (RBI in India, SEC in USA, etc.)
+  - Privacy laws (GDPR in Europe, etc.)
+
+**Architecture**:
+```
+India Banking App:
+├── Deployed in Mumbai region (ap-south-1)
+├── Data stored in India only
+└── Complies with RBI regulations
+
+USA Banking App:
+├── Deployed in Virginia region (us-east-1)
+├── Data stored in USA only
+└── Complies with SEC/FinCEN regulations
+
+Europe Banking App:
+├── Deployed in Ireland region (eu-west-1)
+├── Data stored in EU only
+└── Complies with GDPR
+```
+
+**Why Separate?**
+- **Legal compliance** - financial data cannot cross borders freely
+- **Regulatory requirements** - each country has specific laws
+- **Audit trails** - data must be traceable within jurisdiction
+
+---
+
+## Deployment Decision Framework
+
+```
+Is your application handling sensitive/regulated data?
+    ↓ NO → Deploy in one region + CloudFront globally
+    ↓ YES
+    ↓
+Does the data need to comply with local regulations?
+    ↓ YES → Deploy separate infrastructure per region
+    ↓ NO → Deploy in one region + CloudFront
+```
+---
+
+## AWS CloudTrail - Audit Service
+
+### What is CloudTrail?
+
+**CloudTrail = AWS's Audit Service**
+
+Captures **every single interaction** of all users with AWS.
+
+### What It Records
+
+- **Who**: Which user/role performed the action
+- **What**: What action was performed (e.g., created EC2, deleted S3 bucket)
+- **When**: Timestamp of the action
+- **Where**: Which region, which service
+- **How**: API call details, request parameters
+- **Result**: Success or failure
+
+---

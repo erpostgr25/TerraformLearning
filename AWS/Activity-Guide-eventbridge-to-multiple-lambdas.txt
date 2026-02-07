@@ -17,7 +17,7 @@ EventBridge -> Multiple Lambdas
 -------------------------------------
 
 1. Open Lambda.
-2. Create three Lambda functions (develop code for these or use placeholder code with message saying fulfilling order and checking fraud):
+2. Create two Lambda functions (develop code for these or use placeholder code with message saying fulfilling order and checking fraud):
    - `create-fulfillment`
    - `fraud-evaluator`
 3. Use any runtime.

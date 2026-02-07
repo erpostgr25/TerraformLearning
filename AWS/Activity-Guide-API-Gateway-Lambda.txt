@@ -62,7 +62,7 @@ Author from scratch
 
 Name: my-api-lambda
 
-Runtime: Python 3.x or Node.js 24.x
+Runtime: Node.js 24.x
 
 Create a file named index.mjs in your Lambda function and paste the following code:
 

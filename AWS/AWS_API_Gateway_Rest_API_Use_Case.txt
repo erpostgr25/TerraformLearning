@@ -1,0 +1,126 @@
+===================================
+API Gateway - REST API vs HTTP API
+===================================
+
+### REST API vs HTTP API 
+
+- **REST API** (older, feature-rich, expensive)
+- **HTTP API** (newer, simpler, cheaper, faster)
+
+Both can build RESTful APIs!
+
+---
+
+### HTTP API - The Modern, Simple Choice
+
+**What is it?**: The newer, streamlined API Gateway designed for speed and simplicity.
+
+**When to use**:
+- Building modern REST APIs or HTTP APIs
+- Need low latency (<100ms overhead)
+- Want lower cost (up to 70% cheaper)
+- Simple JWT authorization or Lambda authorizers
+- Proxying to Lambda, HTTP endpoints, or private integrations
+- Don't need advanced features (see below)
+
+**Example Use Case**: Simple microservice API
+
+```
+Mobile App → HTTP API Gateway → Lambda functions → DynamoDB
+
+GET  /users/{id}        → Lambda: GetUser
+POST /users             → Lambda: CreateUser
+PUT  /users/{id}        → Lambda: UpdateUser
+DELETE /users/{id}      → Lambda: DeleteUser
+```
+
+---
+
+### REST API - The Feature-Rich Powerhouse
+
+**What is it?**: The original, full-featured API Gateway.
+
+**When to use REST API instead of HTTP API**:
+
+#### 1) **You Need API Keys and Usage Plans**
+
+**Scenario**: You're offering a public API to customers, and you want to:
+- Give each customer an API key
+- Set rate limits per customer (e.g., 1000 requests/day for free tier, 100k for paid)
+- Track usage per customer
+- Charge based on usage
+
+**Example**: Weather API service
+```
+Free tier:    1,000 requests/day with API key
+Pro tier:    100,000 requests/day, $50/month
+Enterprise:  Unlimited, custom pricing
+```
+
+**How it works**:
+```
+Request: GET /weather?city=London
+Header:  x-api-key: abc123xyz456
+
+API Gateway checks:
+  ✓ Is API key valid?
+  ✓ Has customer exceeded quota?
+  ✓ Throttle if too many requests/second
+  
+If all checks pass → Forward to backend
+If exceeded → Return 429 Too Many Requests
+```
+
+**HTTP API limitation**: No API keys, no usage plans, no per-customer throttling!
+
+---
+
+#### 2) **You Need Request/Response Transformation**
+
+**Scenario**: Your backend expects XML, but your clients send JSON. Or you want to modify requests/responses without changing backend code.
+
+**REST API Feature**: Mapping templates with VTL (Velocity Template Language)
+
+**Example**: Transform JSON to XML
+
+Incoming request (JSON):
+```json
+{
+  "user": "john",
+  "action": "login"
+}
+```
+
+Mapping template:
+```xml
+#set($inputRoot = $input.path('$'))
+<?xml version="1.0"?>
+<request>
+  <username>$inputRoot.user</username>
+  <action>$inputRoot.action</action>
+</request>
+```
+
+Backend receives XML without any backend code changes!
+
+**Another example**: Add static fields
+
+Client sends:
+```json
+{"itemId": "123", "quantity": 5}
+```
+
+Mapping template adds metadata:
+```json
+{
+  "itemId": "123",
+  "quantity": 5,
+  "apiVersion": "v2",
+  "timestamp": "$context.requestTime",
+  "sourceIP": "$context.identity.sourceIp"
+}
+```
+
+**HTTP API limitation**: No request/response transformation! (You'd need Lambda to do this)
+
+---
